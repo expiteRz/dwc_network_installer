@@ -38,7 +38,7 @@ vh12="sake.gs.wiimmfi.de.conf"
 mod1="proxy" # This is a proxy mod that is dependent on the other 2
 mod2="proxy_http" # This is related to mod1
 fqdn="localhost" # This variable fixes the fqdn error in Apache
-UPDATE_URL="https://raw.githubusercontent.com/kyle95wm/dwc_network_installer/master/install.sh"
+UPDATE_URL="https://raw.githubusercontent.com/expiteRz/dwc_network_installer/master/install.sh"
 UPDATE_FILE="$0.tmp"
 ver="3.0" # This lets the user know what version of the script they are running
 # Script Functions
@@ -178,7 +178,7 @@ iptables -A INPUT -i lo -j ACCEPT
 iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 iptables -A INPUT -s $home_ip -p tcp -m tcp --dport 22 -j ACCEPT
 iptables -A INPUT -p tcp -m multiport --dports 80,443 -j ACCEPT
-iptables -A INPUT -p tcp -m multiport --dports 9009,27500,29900,29901,29920,27900,28910,27901,9000,9002,8000,9001 -j ACCEPT
+iptables -A INPUT -p tcp -m multiport --dports 9009,27500,29900,29901,29920,27900,28910,27901,9000,9002,8000,9001,9003 -j ACCEPT #as of cowfc installer script, it should be put 9003
 iptables -A INPUT -p udp -m udp --dport 53 -j ACCEPT
 iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 53 -j ACCEPT
 iptables -A INPUT -m state --state NEW -m udp -p udp --dport 53 -j ACCEPT
@@ -194,7 +194,7 @@ cat >/etc/network/if-pre-up.d/iptables <<EOF
 /sbin/iptables-restore < /etc/iptables.rules
 EOF
 echo "Testing if firewall rules are applied...."
-iptables -S |grep "dports 9009,27500,29900,29901,29920,27900,28910,27901,9000,9002,8000,9001"
+iptables -S |grep "dports 9009,27500,29900,29901,29920,27900,28910,27901,9000,9002,8000,9001,9003"
 if [ $? != 0 ] ; then
 	echo "TEST FAILED!"
 	exit 1
@@ -236,8 +236,12 @@ else
 fi
 clear
 echo "Now installing required packages..."
-apt-get install apache2 python2.7 python-twisted dnsmasq git -y # Install required packages
+apt-get install apache2 python2.7 dnsmasq git -y # Install required packages
 echo "Installing Apache, Python 2.7, Python Twisted, Git and DNSMasq....."
+apt-get install python-pip
+echo "Also, it's a important note that Ubuntu 18.04+ has no way to get Python Twisted."
+pip install twisted
+echo "So we have to get it on pip. Now installing pip and twisted on pip"
 if [ $1 == "--clone-alt" ] ; then
     read -p "Please paste in the GitHub URL you wiuld like to clone: " giturl
     echo "Cloning $giturl"
@@ -318,6 +322,7 @@ echo "Please type in either your LAN or external IP"
 read -e IP
 cat >>/etc/dnsmasq.conf <<EOF # Adds your IP you provide to the end of the DNSMASQ config file
 address=/nintendowifi.net/$IP
+address=/wiimmfi.de/$IP
 EOF
 clear
 # Wiimmfi support
@@ -385,21 +390,6 @@ echo "Done!"
 echo "enabling...."
 a2ensite *.wiimmfi.de.conf
 service apache2 restart
-echo "Adding DNS record to DNSMASQ config"
-echo "----------Lets configure DNSMASQ now----------"
-sleep 3s
-echo "What is your EXTERNAL IP?"
-echo "NOTE: If you plan on using this on a LAN, put the IP of your Linux system instead"
-echo "It's also best practice to make this address static in your /etc/network/interfaces file"
-echo "your LAN IP is"
-hostname  -I | cut -f1 -d' '
-echo "Your external IP is:"
-curl -4 -s icanhazip.com
-echo "Please type in either your LAN or external IP"
-read -e IP
-cat >>/etc/dnsmasq.conf <<EOF
-address=/wiimmfi.de/$IP
-EOF
 service dnsmasq restart
 echo "Checking DNS records...."
 dig @localhost gamestats.gs.wiimmfi.de
